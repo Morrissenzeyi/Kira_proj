@@ -1,0 +1,320 @@
+---
+title: "Kira_proj"
+author: "Maurice senzeyi"
+date: "12/14/2021"
+output: html_document
+---
+
+```{r echo=TRUE}
+library("dplyr")
+library("purrr")
+library('magrittr')
+library('caret')
+library('skimr')
+library(readr)
+```
+# load and preview dataset
+```{r echo=TRUE}
+df <- read.csv("C:/Users/Morris/Downloads/kira/online_shoppers_intention (1).csv")
+head(df)
+```
+```{r echo=TRUE}
+tail(df)
+```
+# finding the shape of our dataset
+```{r echo=TRUE}
+dim(df)
+```
+# checking the data types
+```{r echo=TRUE}
+str(df)
+```
+```{r echo=TRUE}
+colnames(df) = tolower(colnames(df))
+head(df)
+```
+
+#Data cleaning
+##checking duplicates
+```{r echo=TRUE}
+anyDuplicated(df)
+```
+##dropping duplicates
+```{r echo=TRUE}
+library(dplyr)
+df = distinct(df)
+anyDuplicated(df)
+```
+##checking missing values
+
+```{r echo=TRUE}
+colSums(is.na(df))
+```
+##dropping missing values
+
+```{r echo=TRUE}
+df = na.omit(df)
+colSums(is.na(df))
+```
+##checking for outliers
+
+```{r echo=TRUE}
+library(ggplot2)
+numeric_columns <- unlist(lapply(df, is.numeric))
+numeric_columns
+```
+
+```{r echo=TRUE}
+columns_numeric <- df[ , numeric_columns]
+head(columns_numeric)
+```
+```{r echo=TRUE}
+par ( mfrow= c (  2, 4 ))
+for (i in 1 : length (columns_numeric)) {
+boxplot (columns_numeric[,i], main= names (columns_numeric[i]), type= "l" )
+}
+```
+
+```{r echo=TRUE}
+lengths(lapply(df, unique))
+df$revenue  <- as.factor(df$revenue)
+df$visitortype<-as.factor(df$visitortype)
+df$weekend<- as.factor(df$weekend)
+df$specialday<- as.factor(df$specialday)
+df$month<- as.factor(df$month)
+df$region<- as.factor(df$region)
+```
+##checking the changes
+```{r echo=TRUE}
+str(df)
+```
+# Exploratory Data Analysis
+## Univariate analysis
+
+```{r echo=TRUE}
+library(moments)
+hist(df$administrative,
+     main = "histogram for administrative",
+     xlab = "administrative",
+     border = "black",
+     col = "red")
+```
+```{r echo=TRUE}
+skewness(df$administrative)
+kurtosis(df$administrative)
+```
+##hist for product related
+```{r echo=TRUE}
+hist(df$productrelated,
+     main = "histogram for product related",
+     xlab = "Age",
+     border = "black",
+     col = "pink")
+```
+```{r echo=TRUE}
+skewness(df$productrelated)
+kurtosis(df$productrelated)
+```
+##plotting a hist for exit rates
+```{r echo=TRUE}
+hist(df$exitrates,
+     main = "histogram for exit rate",
+     xlab = "Exit rate",
+     border = "black",
+     col = "green")
+```
+```{r echo=TRUE}
+skewness(df$exitrates)
+kurtosis(df$exitrates)
+```
+```{r echo=TRUE}
+plt = ggplot(df, aes(bouncerates, col = revenue)) +
+  geom_density(aes(fill = revenue), alpha = 0.4) +
+  labs(x = "bouncerates", y = "", title = "") +
+  theme(legend.position = "top")
+plt
+```
+```{r echo=TRUE}
+plt_1 = ggplot(df, aes(exitrates, col = revenue)) +
+  geom_density(aes(fill = revenue), alpha = 0.4) +
+  labs(x = "exitrates", y = "", title = "") +
+  theme(legend.position = "none",
+        plot.title = element_text(size = 14))
+plt_1
+```
+
+##Bivariate Analysis
+```{r echo=TRUE}
+plt_2 = ggplot(df, aes(productrelated, productrelated_duration, col = revenue)) +
+  geom_point() + theme(legend.position = "none") +
+  labs(x="product related", y = "product related duration")
+plt_2
+```
+
+```{r echo=TRUE}
+plt_3 = ggplot(df, aes(administrative, administrative_duration, col = revenue)) +
+  geom_point() + theme(legend.position = "none") + 
+  labs(x = "administrative", y = "administrative duration")
+plt_3
+```
+```{r echo=TRUE}
+plt_3 = ggplot(df, aes(informational, informational_duration, col = revenue)) +
+  geom_point() + theme(legend.position = "none") +
+  labs(x = "informational", y = " informational duration")
+plt_3
+```
+## Multivariate Analysis
+```{r echo=TRUE}
+library(dplyr)
+library(ggcorrplot)
+corr = round(cor(select_if(df, is.numeric)), 2)
+ggcorrplot(corr, hc.order = T, ggtheme = ggplot2::theme_dark, 
+          lab = F)
+```
+
+#Implementing the solution
+
+
+
+## K-means clustering
+
+```{r echo=FALSE}
+
+customer<- df[,c(1,2,3,4,5,6,7,8,9)]
+head(customer)
+# Normalizing the dataset so that no particular attribute has more impact on clustering algorithm than others.
+normalize <- function(x){
+  return ((x-min(x)) / (max(x)-min(x)))
+}
+##normalizing our columns
+customer$administrative<- normalize(customer$administrative)
+customer$administrative_duration<- normalize(customer$administrative_duration)
+customer$informational<- normalize(customer$informational)
+customer$informational_duration<- normalize(customer$informational_duration)
+customer$productrelated<- normalize(customer$productrelated)
+customer$productrelated_duration<- normalize(customer$productrelated_duration)
+customer$bouncerates<- normalize(customer$bouncerates)
+customer$exitrates<- normalize(customer$exitrates)
+customer$pagevalues<- normalize(customer$pagevalues)
+
+```
+```{r echo=FALSE}
+summary(customer)
+```
+
+```{r echo=FALSE}
+# Applying the K-means clustering algorithm with no. of centroids(k)=3
+output<- kmeans(customer,3) 
+# Previewing the no. of records in each cluster
+# 
+output$size 
+# Getting the value of cluster center datapoint value(3 centers for k=3)
+# ---
+# 
+output$centers 
+# Getting the cluster vector that shows the cluster where each record falls
+# ---
+# 
+output$cluster
+```
+
+```{r echo=FALSE}
+shop.new<- df[1:15]
+shop.class<- df[, "revenue"]
+head(shop.new)
+```
+
+```{r echo=FALSE}
+head(shop.class)
+```
+
+```{r echo=FALSE}
+dummy <- dummyVars(" ~ .", data=shop.new)
+newdata <- data.frame(predict(dummy, newdata = shop.new)) 
+```
+
+```{r echo=FALSE}
+# checking how the data looks after encoding
+glimpse(newdata)
+```
+
+```{r echo=FALSE}
+# data scaling 
+df <- data.frame(scale(newdata))
+head(df)
+```
+
+```{r echo=FALSE}
+# normalizing data
+
+normalize <- function(x){
+  return ((x-min(x)) / (max(x)-min(x)))
+}
+normalized <- as.data.frame(apply(df,2, normalize))
+head(normalized)
+```
+```{r echo=FALSE}
+library(factoextra)
+#Clustering
+set.seed(123)
+#Determining the number of optimal clusters 
+#Determining optimal number of Clusters (Cluster silhoutte Method )
+fviz_nbclust(normalized, FUN = kmeans, method = "wss")
+```
+
+```{r echo=FALSE}
+result<- kmeans(normalized,8)
+# gives no. of records in each cluster
+result$size  
+```
+
+```{r echo=FALSE}
+# gives value of cluster center datapoint
+result$centers  
+
+```
+
+```{r echo=FALSE}
+#gives cluster vector showing the custer where
+result$cluster  
+```
+
+```{r echo=FALSE}
+#aplly k-means algorithm with no. of centroids(k)=8
+result<- kmeans(normalized,8)
+```
+
+
+```{r echo=FALSE}
+# gives no. of records in each cluster
+result$size
+```
+
+```{r echo=FALSE}
+# gives value of cluster center
+result$centers
+```
+```{r echo=FALSE}
+# Accuracy
+result$betweenss / result$totss
+```
+
+```{r echo=FALSE}
+#aplly k-means algorithm with no. of centroids(k)=4
+result1<- kmeans(normalized,4) 
+```
+
+```{r echo=FALSE}
+# gives no. of records in each cluster
+result1$size  
+```
+
+```{r echo=FALSE}
+# gives value of cluster center datapoint
+result1$centers 
+```
+
+```{r echo=FALSE}
+result1$betweenss / result$totss
+```
+the accuracy is poor and we had the right i think the dataset is imbalance
