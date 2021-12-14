@@ -1,0 +1,356 @@
+---
+title: "Advertising"
+author: "Maurice senzeyi"
+date: "12/14/2021"
+output: html_document
+---
+
+```{r}
+#loading and installing libraries
+library(ggplot2)
+library('corrplot')
+library("dplyr")
+library(readr)
+library("purrr")
+library('caret')
+library('magrittr')
+library('skimr')
+library('tidyverse')
+
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+  
+## Reading in the CSV dataset
+```{r}
+df <- read.csv("C:/Users/Morris/Downloads/advertising.csv")
+df <- na.omit(df)
+head(df)
+```
+```{r}
+# checking missing data
+is.na(df) 
+# checking the total missing values
+colSums(is.na(df))
+# Dealing with the missing
+na.omit(df)
+# no missing values 
+```
+## Handling Outliers
+```{r}
+# Using a boxplot to visualise any existing outlier.
+# Boxplot about the daily internet usage.
+boxplot(df$Daily.Internet.Usage)
+# Function boxplot.stats which lists the outliers in the vectors.
+boxplot.stats(df$Daily.Internet.Usage)$out
+# From the plot and the stats function, there seems to be no outlier present.
+```
+## checking duplicated data
+```{r}
+# Using duplicated() function to check for duplicates across rows.
+dupl_df_rows = df[duplicated(df),]
+# Using the unique() function to remove the duplicated rows.
+unique_df_rows = unique(df)
+```
+
+
+## Getting the statistical summary of the data
+```{r}
+# Statistics of the data
+summary(df)
+# Structure of the data
+str(df)
+```
+
+##  Univariate EDA 
+```{r}
+# Performing an analysis of a single variable. (Area Income).
+# calculating the mean.
+x <- unique_df_rows$Area.Income
+avg <- mean(x)
+# calculating the median.
+mid <- median(x)
+# calculating the mode.
+getmode <- function(v){
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v,uniqv)))]
+}
+most <- getmode(x)
+# calculating the maximum.
+high <- max(x)
+# calculating the minimum.
+low <- min(x)
+# calculating the range.
+rng <- range(x)
+# calculating the quantile.
+qtile <- quantile(x)
+# calculating the variance.
+vari <- var(x)
+# calculating the standard deviation.
+stdd <- sd(x)
+```
+
+```{r}
+# Performing the Univariate Graphical Plots
+# Box Plot
+boxplot(x)
+# getting the frequency table
+area_income <- unique_df_rows$Area.Income
+income_frequency <- table(area_income)
+# barplot of the area income
+barplot(income_frequency)
+# histogram of the area income
+hist(income_frequency)
+```
+## Bivariate EDA
+```{r}
+# using two variables. Area Income & Daily Internet Usage
+daily_internet_use <- unique_df_rows$Daily.Internet.Usage
+# performing a covariance
+cov(area_income, daily_internet_use)
+# correlation coefficient
+cor(area_income, daily_internet_use)
+# creating a scatter plot
+plot(area_income, daily_internet_use, xlab="Area Income", ylab="Daily Internet Use")
+```
+
+```{r}
+# creating a scatter plot of Area Income vs Daily Internet Usage
+plot(area_income, daily_internet_use, xlab="Area Income", ylab="Daily Internet Use")
+# creating a scatter plot of Area Income vs Daily Time Spent on The Site
+plot(df$Area.Income, df$Daily.Time.Spent.on.Site, xlab="Area Income", ylab="Daily Time Spent on Site")
+# install the GGally package
+library(ggplot2)
+# visualise the correlation matrix
+ggplot(df, method = c("everything", "pearson")) 
+```
+## Performing Supervised Learning
+## Simple Linear Regression
+```{r}
+# Simple Linear Regression
+# Splitting the dataset into the Training set and Test set
+
+
+library(caTools)
+set.seed(123)
+split = sample.split(df$Clicked.on.Ad, SplitRatio = 0.8)
+training_set = subset(df, split == TRUE)
+test_set = subset(df, split == FALSE)
+
+# Fitting Simple Linear Regression to the Training set
+regressor = lm(formula = Clicked.on.Ad ~ Daily.Time.Spent.on.Site,
+               data = training_set)
+# Predicting the Test set results
+y_pred = predict(regressor, newdata = test_set)
+# Summary
+summary(regressor)
+```
+
+## Multiple Linear Regression
+```{r}
+# Multiple Linear Regression
+# Selecting the multiple columns
+input <- df[,c('Daily.Time.Spent.on.Site', 'Daily.Internet.Usage','Age')]
+# Splitting the dataset into the Training set and Test set
+
+library(caTools)
+set.seed(123)
+split = sample.split(ads$Clicked.on.Ad, SplitRatio = 0.8)
+multi_training_set = subset(df, split == TRUE)
+multi_test_set = subset(df, split == FALSE)
+
+# Fitting Multiple Linear Regression to the Training set
+multi_regressor = lm(formula = Clicked.on.Ad ~ Daily.Time.Spent.on.Site + Daily.Internet.Usage + Age, data = multi_training_set)
+# Predicting the Test set results
+y_multi_pred = predict(multi_regressor, newdata = multi_test_set)
+```
+
+## K-Nearest Neighbours
+```{r}
+set.seed(1234)
+# Randomizing the rows, creates a uniform distribution of 150
+random <- runif(150)
+df_random <- df[order(random),]
+# Selecting the first 6 rows from iris_random
+head(df_random)
+```
+
+```{r}
+
+# We define a normal function which will normalize the set of values according to its minimum value and maximum value.
+normal <- function(x) (
+  return( ((x - min(x)) /(max(x)-min(x))) )
+)
+normal(1:5)
+df_new <- as.data.frame(lapply(df_random[,1:4], normal))
+summary(df_new)
+```
+
+
+```{r}
+# Lets now create test and train data sets
+train_knn <- df_new[1:800,]
+test_knn <- df_new[801:1000,]
+train_sp_knn <- df_new[1:800,10]
+test_sp_knn <- df_new[801:1000,10]
+```
+
+```{r}
+ 
+# in order to classify the test data point.
+# Lets build a model on it; cl is the class of the training data set and k is the no of neighbours to look for 
+
+library(class)    
+require(class)
+model <- knn(train = train_knn,test = test_knn, ,cl = train_sp_knn, k=13)
+table(factor(model))
+table(test_sp_knn,model)
+
+```
+
+
+## Decision Tree Classifiers
+```{r}
+# Decision Tree Classification
+
+library(caTools)
+set.seed(123)
+# Fitting Decision Tree Classification to the Training set
+install.packages('rpart')
+library(rpart)
+classifier = rpart(Clicked.on.Ad ~ Daily.Time.Spent.on.Site + Age + Area.Income + Daily.Internet.Usage, data = df)
+# rpart plot
+#rpart.plot(classifier)
+# Plotting the tree
+plot(classifier)
+text(classifier)
+```
+
+## Support Vector Machines
+```{r}
+install.packages('caret')
+library(caret)
+```
+
+```{r}
+# Next we split the data into training set and testing set. 
+# 
+intrain <- createDataPartition(y = df$Clicked.on.Ad, p= 0.7, list = FALSE)
+train_svm <- df[intrain,]
+test_svm <- df[-intrain,]
+```
+
+```{r}
+# We check the dimensions of out training dataframe and testing dataframe
+# ---
+# 
+dim(train_svm); 
+dim(test_svm);
+```
+
+
+```{r}
+# We then clean the data using the anyNA() 
+#  
+anyNA(df)
+```
+
+```{r}
+# Then check the summary of our data 
+# ---
+#  
+summary(df)
+```
+
+
+```{r}
+ 
+# We will implement this through the trainControl() method. 
+# 
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+svm_Linear <- train(Clicked.on.Ad ~ Daily.Time.Spent.on.Site + Age + Area.Income + Daily.Internet.Usage, data = train_svm, method = "svmLinear",
+trControl=trctrl,
+preProcess = c("center", "scale"),
+tuneLength = 10)
+```
+
+
+```{r}
+# We can then check the result of our train() model as shown below
+# ---
+# 
+svm_Linear
+```
+
+```{r}
+# We can use the predict() method for predicting results as shown below. 
+# We pass 2 arguements, our trained model and our testing data frame.
+# ---
+# 
+test_pred <- predict(svm_Linear, newdata = test_knn)
+test_pred
+```
+
+
+```{r}
+# Now checking for our accuracy of our model by using a confusion matrix 
+# ---
+# 
+library(caret)
+confusionMatrix(table(test_pred, test_knn$Clicked.on.Ad))
+```
+
+
+
+## Naive Bayes Classifier
+
+
+```{r}
+# Splitting data into training and test data sets
+# ---
+# 
+indxTrain <- createDataPartition(y = df$Clicked.on.Ad,p = 0.7,list = FALSE)
+train_naive <- df[indxTrain,]
+test_naive <- df[-indxTrain,]
+ 
+```
+
+```{r}
+# Comparing the outcome of the training and testing phase
+# ---
+# Creating objects x which holds the predictor variables and y which holds the response variables
+# ---
+#
+x = df[,-9]
+y = df$Clicked.on.Ad
+```
+
+```{r}
+# Loading our inbuilt e1071 package that holds the Naive Bayes function.
+# ---
+install.packages('e1071')
+library(e1071)
+```
+
+```{r}
+# Now building our model 
+
+model = train(x,y,'nb',trControl=trainControl(method='cv',number=10))
+```
+
+```{r}
+# Model Evalution
+# ---
+# Predicting our testing set
+# 
+#install.packages('klaR')
+#library(klaR)
+Predict <- predict(model,newdata = testing)
+# Getting the confusion matrix to see accuracy value and other parameter values
+# ---
+# 
+confusionMatrix(Predict, testing$Clicked.on.Ad)
+```
